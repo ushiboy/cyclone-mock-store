@@ -7,48 +7,46 @@ function defaultUpdate(state) {
 const NoneActionType = none().type;
 
 function isNoneAction(action) {
-  return action.type === NoneActionType;
+  return !(action instanceof Promise) || action.type === NoneActionType;
 }
 
-export function createMockStore() {
-  return (initState, update = defaultUpdate) => {
-    const actions = [];
+export function createMockStore(initState, update = defaultUpdate) {
+  const actions = [];
 
-    const store = createStore(initState, (state, action) => {
-      const [nextState, nextAction] = update(state, action);
-      if (Array.isArray(nextAction)) {
-        actions.push(...nextAction);
-      } else if (nextAction != null && !isNoneAction(nextAction)) {
-        actions.push(nextAction);
-      }
-      return [nextState, nextAction];
-    });
+  const store = createStore(initState, (state, action) => {
+    const [nextState, nextAction] = update(state, action);
+    if (Array.isArray(nextAction)) {
+      actions.push(...nextAction);
+    } else if (nextAction != null && !isNoneAction(nextAction)) {
+      actions.push(nextAction);
+    }
+    return [nextState, nextAction];
+  });
 
-    return {
-      dispatch(action) {
-        actions.push(action);
-        store.dispatch(action);
-      },
+  return {
+    async dispatch(action) {
+      actions.push(action);
+      return store.dispatch(action);
+    },
 
-      subscribe(listener) {
-        return store.subscribe(listener);
-      },
+    subscribe(listener) {
+      return store.subscribe(listener);
+    },
 
-      unsubscribe(listener) {
-        store.unsubscribe(listener);
-      },
+    unsubscribe(listener) {
+      store.unsubscribe(listener);
+    },
 
-      getState() {
-        return store.getState();
-      },
+    getState() {
+      return store.getState();
+    },
 
-      getActions() {
-        return actions;
-      },
+    getActions() {
+      return actions;
+    },
 
-      clearActions() {
-        actions.splice(0);
-      }
-    };
+    clearActions() {
+      actions.splice(0);
+    }
   };
 }
