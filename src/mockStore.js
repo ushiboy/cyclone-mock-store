@@ -12,8 +12,9 @@ function isNoneAction(action) {
 
 export function createMockStore(initState, update = defaultUpdate) {
   const actions = [];
+  let extraArgument;
 
-  const store = createStore(initState, (state, action) => {
+  const wrapUpdate = (state, action) => {
     const [nextState, nextAction] = update(state, action);
     if (Array.isArray(nextAction)) {
       actions.push(...nextAction);
@@ -21,11 +22,17 @@ export function createMockStore(initState, update = defaultUpdate) {
       actions.push(nextAction);
     }
     return [nextState, nextAction];
-  });
+  };
 
-  return {
+  let store = createStore(initState, wrapUpdate);
+
+  const mockApi = {
     async dispatch(action) {
-      actions.push(action);
+      if (typeof action === 'function') {
+        actions.push(action(extraArgument));
+      } else {
+        actions.push(action);
+      }
       return store.dispatch(action);
     },
 
@@ -47,6 +54,15 @@ export function createMockStore(initState, update = defaultUpdate) {
 
     clearActions() {
       actions.splice(0);
+    }
+  };
+
+  return {
+    ...mockApi,
+    withExtraArgument(extra) {
+      store = createStore(initState, wrapUpdate, extra);
+      extraArgument = extra;
+      return mockApi;
     }
   };
 }

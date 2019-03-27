@@ -149,4 +149,85 @@ describe('createMockStore', function() {
       });
     });
   });
+
+  describe('withExtraArgument', () => {
+    let store;
+
+    const initState = () => ({
+      message: ''
+    });
+
+    const tweet = () => {
+      return ({ greet }) => {
+        return {
+          type: 'greet',
+          payload: {
+            message: greet()
+          }
+        };
+      };
+    };
+
+    const greet = () => {
+      return 'test';
+    };
+
+    const update = (state, action) => {
+      switch (action.type) {
+        case 'greet': {
+          return [
+            {
+              message: action.payload.message
+            },
+            none()
+          ];
+        }
+        default: {
+          return [state, none()];
+        }
+      }
+    };
+    beforeEach(() => {
+      store = createMockStore(initState(), update).withExtraArgument({
+        greet
+      });
+    });
+    describe('dispatch', () => {
+      it('should push action history', async () => {
+        await store.dispatch(tweet());
+        const actions = store.getActions();
+        assert(actions.length === 1);
+        const [a] = actions;
+        assert(a.type === 'greet');
+        assert(a.payload.message === greet());
+      });
+    });
+    describe('getState', () => {
+      it('should return the state of store', () => {
+        const state = store.getState();
+        assert(state.message === '');
+      });
+    });
+    describe('getActions', () => {
+      it('should return action histories', async () => {
+        await store.dispatch({ type: 'foo' });
+        await store.dispatch({ type: 'baz' });
+        const actions = store.getActions();
+        assert(actions.length === 2);
+        const [a1, a2] = actions;
+        assert(a1.type === 'foo');
+        assert(a2.type === 'baz');
+      });
+    });
+    describe('clearActions', () => {
+      it('should clear action histories', async () => {
+        await store.dispatch({ type: 'foo' });
+        await store.dispatch({ type: 'baz' });
+        assert(store.getActions().length === 2);
+        store.clearActions();
+        const actions = store.getActions();
+        assert(store.getActions().length === 0);
+      });
+    });
+  });
 });
