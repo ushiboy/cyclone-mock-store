@@ -2,7 +2,7 @@
   "name": "cyclone-mock-store",
   "version": "0.1.0",
   "description": "",
-  "main": "src/mockStore.js",
+  "main": "lib/mockStore.js",
   "files": [
     "src",
     "lib"
