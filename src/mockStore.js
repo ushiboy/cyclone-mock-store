@@ -24,16 +24,25 @@ export function createMockStore(initState, update = defaultUpdate) {
     return [nextState, nextAction];
   };
 
+  const processAction = action => {
+    if (typeof action === 'function') {
+      action = action(extraArgument);
+    }
+    if (action instanceof Promise) {
+      return action;
+    } else {
+      return Promise.resolve(action);
+    }
+  };
+
   let store = createStore(initState, wrapUpdate);
 
   const mockApi = {
-    async dispatch(action) {
-      if (typeof action === 'function') {
-        actions.push(action(extraArgument));
-      } else {
+    dispatch(action) {
+      return processAction(action).then(action => {
         actions.push(action);
-      }
-      return store.dispatch(action);
+        return store.dispatch(action);
+      });
     },
 
     subscribe(listener) {

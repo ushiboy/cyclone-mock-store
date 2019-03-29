@@ -82,10 +82,14 @@ describe('createMockStore', function() {
     describe('dispatch', () => {
       it('should push action history', async () => {
         await store.dispatch({ type: 'increment' });
+        await store.dispatch(Promise.resolve({ type: 'decrement' }));
+        await store.dispatch(() => Promise.resolve({ type: 'decrement' }));
         const actions = store.getActions();
-        assert(actions.length === 1);
-        const [a] = actions;
-        assert(a.type === 'increment');
+        assert(actions.length === 3);
+        const [a1, a2, a3] = actions;
+        assert(a1.type === 'increment');
+        assert(a2.type === 'decrement');
+        assert(a3.type === 'decrement');
       });
     });
     describe('getState', () => {
