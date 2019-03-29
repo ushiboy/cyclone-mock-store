@@ -4,45 +4,36 @@ function defaultUpdate(state) {
   return [state, none()];
 }
 
-const NoneActionType = none().type;
-
-function isNoneAction(action) {
-  return !(action instanceof Promise) || action.type === NoneActionType;
+function processAction(action, extraArgument) {
+  if (typeof action === 'function') {
+    action = action(extraArgument);
+  }
+  if (action instanceof Promise) {
+    return action;
+  } else {
+    return Promise.resolve(action);
+  }
 }
 
-export function createMockStore(initState, update = defaultUpdate) {
+export function createMockStore(initState) {
   const actions = [];
+  const update = defaultUpdate;
   let extraArgument;
 
-  const wrapUpdate = (state, action) => {
-    const [nextState, nextAction] = update(state, action);
-    if (Array.isArray(nextAction)) {
-      actions.push(...nextAction);
-    } else if (nextAction != null && !isNoneAction(nextAction)) {
-      actions.push(nextAction);
-    }
-    return [nextState, nextAction];
+  let store = createStore(initState, update);
+  let originDispatch = store.dispatch;
+  const overrideDispatch = action => {
+    return processAction(action, extraArgument).then(action => {
+      actions.push(action);
+      return originDispatch(action);
+    });
   };
-
-  const processAction = action => {
-    if (typeof action === 'function') {
-      action = action(extraArgument);
-    }
-    if (action instanceof Promise) {
-      return action;
-    } else {
-      return Promise.resolve(action);
-    }
-  };
-
-  let store = createStore(initState, wrapUpdate);
+  // override!
+  store.dispatch = overrideDispatch;
 
   const mockApi = {
     dispatch(action) {
-      return processAction(action).then(action => {
-        actions.push(action);
-        return store.dispatch(action);
-      });
+      return store.dispatch(action);
     },
 
     subscribe(listener) {
@@ -69,7 +60,9 @@ export function createMockStore(initState, update = defaultUpdate) {
   return {
     ...mockApi,
     withExtraArgument(extra) {
-      store = createStore(initState, wrapUpdate, extra);
+      store = createStore(initState, update, extra);
+      originDispatch = store.dispatch;
+      store.dispatch = overrideDispatch;
       extraArgument = extra;
       return mockApi;
     }
