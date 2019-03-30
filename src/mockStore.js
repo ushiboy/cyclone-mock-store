@@ -1,51 +1,28 @@
-import { createStore, none } from '@ushiboy/cyclone';
-
-function defaultUpdate(state) {
-  return [state, none()];
-}
-
-function processAction(action, extraArgument) {
-  if (typeof action === 'function') {
-    action = action(extraArgument);
-  }
-  if (action instanceof Promise) {
-    return action;
-  } else {
-    return Promise.resolve(action);
-  }
-}
-
 export function createMockStore(initState) {
   const actions = [];
-  const update = defaultUpdate;
+  const listeners = new Set();
   let extraArgument;
-
-  let store = createStore(initState, update);
-  let originDispatch = store.dispatch;
-  const overrideDispatch = action => {
-    return processAction(action, extraArgument).then(action => {
-      actions.push(action);
-      return originDispatch(action);
-    });
-  };
-  // override!
-  store.dispatch = overrideDispatch;
 
   const mockApi = {
     dispatch(action) {
-      return store.dispatch(action);
+      return processAction(action, extraArgument).then(action => {
+        actions.push(action);
+      });
     },
 
     subscribe(listener) {
-      return store.subscribe(listener);
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
     unsubscribe(listener) {
-      store.unsubscribe(listener);
+      listeners.delete(listener);
     },
 
     getState() {
-      return store.getState();
+      return initState;
     },
 
     getActions() {
@@ -60,11 +37,19 @@ export function createMockStore(initState) {
   return {
     ...mockApi,
     withExtraArgument(extra) {
-      store = createStore(initState, update, extra);
-      originDispatch = store.dispatch;
-      store.dispatch = overrideDispatch;
       extraArgument = extra;
       return mockApi;
     }
   };
+}
+
+function processAction(action, extraArgument) {
+  if (typeof action === 'function') {
+    action = action(extraArgument);
+  }
+  if (action instanceof Promise) {
+    return action;
+  } else {
+    return Promise.resolve(action);
+  }
 }
