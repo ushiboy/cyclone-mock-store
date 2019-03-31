@@ -1,51 +1,45 @@
-export function createMockStore(initState) {
-  const actions = [];
-  const listeners = new Set();
-  let extraArgument;
+export function createMockStore() {
+  function mockDispatcher(extra = undefined) {
+    const actions = [];
 
-  const mockApi = {
-    dispatch(action) {
-      return processAction(action, extraArgument).then(action => {
-        actions.push(action);
-      });
-    },
+    const mockApi = {
+      dispatch(action) {
+        return processAction(action, extra).then(action => {
+          actions.push(action);
+        });
+      },
 
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+      subscribe() {
+        throw new Error('Not Implemented.');
+      },
 
-    unsubscribe(listener) {
-      listeners.delete(listener);
-    },
+      unsubscribe() {
+        throw new Error('Not Implemented.');
+      },
 
-    getState() {
-      return initState;
-    },
+      getState() {
+        throw new Error('Not Implemented.');
+      },
 
-    getActions() {
-      return actions;
-    },
+      getActions() {
+        return actions;
+      },
 
-    clearActions() {
-      actions.splice(0);
-    }
-  };
+      clearActions() {
+        actions.splice(0);
+      }
+    };
+    return mockApi;
+  }
 
   return {
-    ...mockApi,
-    withExtraArgument(extra) {
-      extraArgument = extra;
-      return mockApi;
-    }
+    mockDispatcher
   };
 }
 
-function processAction(action, extraArgument) {
+function processAction(action, extra) {
   if (typeof action === 'function') {
-    action = action(extraArgument);
+    action = action(extra);
   }
   if (action instanceof Promise) {
     return action;

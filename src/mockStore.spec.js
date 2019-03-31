@@ -1,31 +1,87 @@
 const assert = require('power-assert');
 import { createMockStore } from './mockStore.js';
-import sinon from 'sinon';
-import { none } from '@ushiboy/cyclone';
 
 describe('createMockStore', function() {
-  const initState = () => ({
-    count: 0
-  });
+  describe('mockDispatcher', () => {
+    const { mockDispatcher } = createMockStore();
 
-  context('default update', () => {
     let store;
     beforeEach(() => {
-      store = createMockStore(initState());
+      store = mockDispatcher();
     });
     describe('dispatch', () => {
-      it('should push action history', async () => {
-        await store.dispatch({ type: 'increment' });
-        const actions = store.getActions();
-        assert(actions.length === 1);
-        const [a] = actions;
-        assert(a.type === 'increment');
+      context('without extra argument', () => {
+        it('should push action history', async () => {
+          await store.dispatch({ type: 'increment' });
+          await store.dispatch(Promise.resolve({ type: 'decrement' }));
+          const actions = store.getActions();
+          assert(actions.length === 2);
+          const [a1, a2] = actions;
+          assert(a1.type === 'increment');
+          assert(a2.type === 'decrement');
+        });
+      });
+      context('with extra argument', () => {
+        const tweet = () => {
+          return ({ greet }) => {
+            return {
+              type: 'greet',
+              payload: {
+                message: greet()
+              }
+            };
+          };
+        };
+        const greet = () => {
+          return 'test';
+        };
+        beforeEach(() => {
+          store = mockDispatcher({
+            greet
+          });
+          return store.dispatch(tweet());
+        });
+        it('should push action history', () => {
+          const actions = store.getActions();
+          assert(actions.length === 1);
+          const [a] = actions;
+          assert(a.type === 'greet');
+        });
+        it('use extra argument', () => {
+          const actions = store.getActions();
+          const [a] = actions;
+          assert(a.payload.message === greet());
+        });
       });
     });
     describe('getState', () => {
-      it('should return the state of store', () => {
-        const state = store.getState();
-        assert(state.count === 0);
+      it('should throws the error "Not Implemented."', () => {
+        try {
+          const state = store.getState();
+          assert.fail();
+        } catch (e) {
+          assert(e.message === 'Not Implemented.');
+        }
+      });
+    });
+    describe('subscribe', () => {
+      it('should throws the error "Not Implemented."', () => {
+        try {
+          store.subscribe();
+          assert.fail();
+        } catch (e) {
+          assert(e.message === 'Not Implemented.');
+        }
+      });
+    });
+    describe('unsubscribe', () => {
+      it('should throws the error "Not Implemented."', () => {
+        try {
+          store.unsubscribe();
+          assert.fail();
+        } catch (e) {
+          assert(e.message === 'Not Implemented.');
+        }
       });
     });
     describe('getActions', () => {
@@ -43,72 +99,6 @@ describe('createMockStore', function() {
       it('should clear action histories', async () => {
         await store.dispatch({ type: 'increment' });
         await store.dispatch({ type: 'decrement' });
-        assert(store.getActions().length === 2);
-        store.clearActions();
-        const actions = store.getActions();
-        assert(store.getActions().length === 0);
-      });
-    });
-  });
-
-  describe('withExtraArgument', () => {
-    let store;
-
-    const initState = () => ({
-      message: ''
-    });
-
-    const tweet = () => {
-      return ({ greet }) => {
-        return {
-          type: 'greet',
-          payload: {
-            message: greet()
-          }
-        };
-      };
-    };
-
-    const greet = () => {
-      return 'test';
-    };
-
-    beforeEach(() => {
-      store = createMockStore(initState()).withExtraArgument({
-        greet
-      });
-    });
-    describe('dispatch', () => {
-      it('should push action history', async () => {
-        await store.dispatch(tweet());
-        const actions = store.getActions();
-        assert(actions.length === 1);
-        const [a] = actions;
-        assert(a.type === 'greet');
-        assert(a.payload.message === greet());
-      });
-    });
-    describe('getState', () => {
-      it('should return the state of store', () => {
-        const state = store.getState();
-        assert(state.message === '');
-      });
-    });
-    describe('getActions', () => {
-      it('should return action histories', async () => {
-        await store.dispatch({ type: 'foo' });
-        await store.dispatch({ type: 'baz' });
-        const actions = store.getActions();
-        assert(actions.length === 2);
-        const [a1, a2] = actions;
-        assert(a1.type === 'foo');
-        assert(a2.type === 'baz');
-      });
-    });
-    describe('clearActions', () => {
-      it('should clear action histories', async () => {
-        await store.dispatch({ type: 'foo' });
-        await store.dispatch({ type: 'baz' });
         assert(store.getActions().length === 2);
         store.clearActions();
         const actions = store.getActions();
