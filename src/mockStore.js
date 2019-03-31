@@ -1,45 +1,24 @@
-import { createStore, none } from '@ushiboy/cyclone';
-
-function defaultUpdate(state) {
-  return [state, none()];
-}
-
-const NoneActionType = none().type;
-
-function isNoneAction(action) {
-  return action.type === NoneActionType;
-}
-
 export function createMockStore() {
-  return (initState, update = defaultUpdate) => {
+  function mockDispatcher(extra = undefined) {
     const actions = [];
 
-    const store = createStore(initState, (state, action) => {
-      const [nextState, nextAction] = update(state, action);
-      if (Array.isArray(nextAction)) {
-        actions.push(...nextAction);
-      } else if (nextAction != null && !isNoneAction(nextAction)) {
-        actions.push(nextAction);
-      }
-      return [nextState, nextAction];
-    });
-
-    return {
+    const mockApi = {
       dispatch(action) {
-        actions.push(action);
-        store.dispatch(action);
+        return processAction(action, extra).then(action => {
+          actions.push(action);
+        });
       },
 
-      subscribe(listener) {
-        return store.subscribe(listener);
+      subscribe() {
+        throw new Error('Not Implemented.');
       },
 
-      unsubscribe(listener) {
-        store.unsubscribe(listener);
+      unsubscribe() {
+        throw new Error('Not Implemented.');
       },
 
       getState() {
-        return store.getState();
+        throw new Error('Not Implemented.');
       },
 
       getActions() {
@@ -50,5 +29,21 @@ export function createMockStore() {
         actions.splice(0);
       }
     };
+    return mockApi;
+  }
+
+  return {
+    mockDispatcher
   };
+}
+
+function processAction(action, extra) {
+  if (typeof action === 'function') {
+    action = action(extra);
+  }
+  if (action instanceof Promise) {
+    return action;
+  } else {
+    return Promise.resolve(action);
+  }
 }
